@@ -1,21 +1,19 @@
 /*=======================================================================================
 ** File Name:  	client.c
 **
-** Title:  		UDP Client Application
+** Title:  	UDP Client Application
 **
 ** $Author:    	Stephen Scott
 ** $Revision: 	1.0 $
 ** $Date:      	2020-07-11
 **
 ** Purpose:  	This application is a UDP client which creates a forked process, and
-**				sends packets to two different sockets in the UDP server application
+**		sends packets to two different sockets in the UDP server application.
 **
 ** Functions Defined:
-**    initServAddrs - Initializes memory for addresses in address table and sets server HOST/PORT addresses
+**    createChild 	- Creates child process using fork()
 **    createSocket 	- Calls to socket() to create a new socket
-**    bindSocket	- Calls to bind() to bind a socket to a server address in the address table
-**	  processPacket	- Prints the data from the received packet
-**	  getMax		- Global utility function to get max integer from array of integers
+**    initPacket	- Initializes a data packets with values
 **
 ** Modification History:
 **   Date | Author | Description
