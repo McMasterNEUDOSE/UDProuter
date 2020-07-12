@@ -1,4 +1,4 @@
-/*=======================================================================================
+/*===========================================================================
 ** File Name:  	client.c
 **
 ** Title:  	UDP Client Application
@@ -7,8 +7,8 @@
 ** $Revision: 	1.0 $
 ** $Date:      	2020-07-11
 **
-** Purpose:  	This application is a UDP client which creates a forked process, and
-**		sends packets to two different sockets in the UDP server application.
+** Purpose:  	This application is a UDP client which creates a forked process,
+**				and sends packets to two sockets in the UDP server application.
 **
 ** Functions Defined:
 **    createChild 	- Creates child process using fork()
@@ -20,19 +20,22 @@
 **   ---------------------------
 **   2020-07-11 | Stephen Scott | Build #: Code Started
 **
-**=====================================================================================*/
+**===========================================================================*/
 
 
-/*=====================================================================================
+/*===========================================================================
 ** INCLUDE FILES
-**=====================================================================================*/
+**===========================================================================*/
 #include "router.h"
 
-/*=====================================================================================
+/*===========================================================================
 ** MAIN PROCESS
-**=====================================================================================*/
+**===========================================================================*/
 int main(void)
 {
+	/* Create data constands */
+	char letters[2];
+	int nums[2];
 	/* Create child process */
 	PID pid = createChild();
 	/* Create a socket */
@@ -45,7 +48,7 @@ int main(void)
 	struct sockaddr_in servaddr;
 	/* Allocate memory for server address */
 	memset(&servaddr, 0, sizeof(servaddr));
-	/* Set server address host - in this case the server is on the same host for each process */
+	/* Set server address host - same host for each process */
 	servaddr.sin_addr.s_addr = HOST;
 	/* Check to see which process I am, and adjust PORT and data accordingly */
 	if (pid == 0)
@@ -54,7 +57,8 @@ int main(void)
 		/* Set port of child process */
 		servaddr.sin_port = htons(PORT1);
 		/* Init child packet data with some values */
-		initPacket(&packet, 'C', 'H', 1, 2);
+		letters[0] = 'C'; letters[1] = 'H'; nums[0] = 1; nums[1] = 2;
+		initPacket(&packet, letters, nums);
 	}
 	else
 	{
@@ -62,19 +66,22 @@ int main(void)
 		/* Set port of parent process */
 		servaddr.sin_port = htons(PORT2);
 		/* Init parent packet data with some values */
-		initPacket(&packet, 'P', 'A', 3, 4);
+		letters[0] = 'P'; letters[1] = 'A'; nums[0] = 3; nums[1] = 4;
+		initPacket(&packet, letters, nums);
 	}
 
 	int len, n;
 
 	len = sizeof(servaddr);
 	/* Send packet to server */
-	sendto(fd, (const DATA_stdPacket *) &packet, sizeof(DATA_stdPacket), MSG_CONFIRM, (const struct sockaddr *) &servaddr, len);
+	sendto(fd, (const DATA_stdPacket *) &packet, sizeof(DATA_stdPacket), 
+		MSG_CONFIRM, (const struct sockaddr *) &servaddr, len);
 	printf("\nClient: Packet sent.\n\n");
-	/* If the server mode is two-way then receive confirmation packet from server */
+	/* If server mode is two-way then receive confirmation packet from server */
 	if (SERVMODE == 2)
 	{
-		n = recvfrom(fd, (char *)buffer, MAXBUFFER, MSG_WAITALL, (struct sockaddr *) &servaddr, &len);
+		n = recvfrom(fd, (char *)buffer, MAXBUFFER, MSG_WAITALL, 
+			(struct sockaddr *) &servaddr, &len);
 		buffer[n] = '\0';
 		printf("Server says: \n\t\t%s\n", buffer);
 	}
@@ -84,9 +91,9 @@ int main(void)
 	exit(EXIT_SUCCESS);
 }
 
-/*=====================================================================================
+/*===========================================================================
 ** FUNCTION DEFINITIONS
-**=====================================================================================*/
+**===========================================================================*/
 
 PID createChild()
 {
@@ -119,10 +126,10 @@ int createSocket()
 	}
 }
 
-void initPacket(DATA_stdPacket *packet, char char1, char char2, int num1, int num2)
+void initPacket(DATA_stdPacket *packet, char letters[], int nums[])
 {
-	packet->firstChar 	= char1;
-	packet->secondChar 	= char2;
-	packet->firstNum	= num1;
-	packet->secondNum	= num2;
+	packet->firstChar 	= letters[0];
+	packet->secondChar 	= letters[1];
+	packet->firstNum	= nums[0];
+	packet->secondNum	= nums[1];
 }

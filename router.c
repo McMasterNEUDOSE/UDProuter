@@ -1,38 +1,41 @@
-/*=======================================================================================
+/*===========================================================================
 ** File Name:  	router.c
 **
-** Title:  	UDP Server Application
+** Title: 		UDP Server Application
 **
-** $Author:    	Stephen Scott
+** $Author:		Stephen Scott
 ** $Revision: 	1.0 $
 ** $Date:      	2020-07-11
 **
-** Purpose:  	This application is a UDP server which receives packets from multiple
-**		sockets and sends confirmation to clients of packets received.
+** Purpose:  	This application is a UDP server which receives packets from
+**				multiple sockets and sends confirmation to clients.
 **
 ** Functions Defined:
-**    	initServAddrs 	- Initializes memory for addresses in address table and sets server HOST/PORT addresses
+**    	initServAddrs 	- Initializes memory for addresses in address table 
+**							and sets server HOST/PORT addresses
 **    	createSocket 	- Calls to socket() to create a new socket
-**   	bindSocket	- Calls to bind() to bind a socket to a server address in the address table
-**	processPacket	- Prints the data from the received packet
-**	getMax		- Global utility function to get max integer from array of integers
+**   	bindSocket		- Calls to bind() to bind a socket to a server address
+**							in the address table
+**		processPacket	- Prints the data from the received packet
+**		getMax			- Global utility function to get max integer from array
+**							of integers
 **
 ** Modification History:
 **   Date | Author | Description
 **   ---------------------------
 **   2020-07-11 | Stephen Scott | Build #: Code Started
 **
-**=====================================================================================*/
+**===========================================================================*/
 
 
-/*=====================================================================================
+/*===========================================================================
 ** INCLUDE FILES
-**=====================================================================================*/
+**===========================================================================*/
 #include "router.h"
 
-/*=====================================================================================
+/*===========================================================================
 ** MAIN PROCESS
-**=====================================================================================*/
+**===========================================================================*/
 int main(void)
 {
 	/* Init array to hold socket file descriptors */
@@ -84,12 +87,13 @@ int main(void)
 		timeout.tv_sec 	= 5;
 		timeout.tv_usec = 0;
 		/* Calls select() for blocking-wait on readable sockets until timeout*/
-		if ((selectret = select(getMax(fds) + 1, &readfds, NULL, NULL, &timeout)) == -1)
+		selectret = select(getMax(fds) + 1, &readfds, NULL, NULL, &timeout);
+		if (selectret == -1)
 		{
 			perror("select failed.");
 			exit(EXIT_FAILURE);
 		}
-		/* Will be zero due to select timeout when no sockets are ready for read */
+		/* Zero if select times out when no sockets are ready for read */
 		else if (selectret == 0)
 		{
 			printf("Timeout. Continue.\n");
@@ -99,20 +103,24 @@ int main(void)
 		{
 			/* Init index for client addresses */
 			int clientAddr = FIRST_CLIENTADDR;
-			/* Check which sockets are ready for reading, and read from those sockets */
+			/* Check which sockets are ready for reading, and read */
 			for (int fd = 0; fd < NUMSOCK; fd++)
 			{
-				/* If the current socket is ready to read then receive a packet and send confirmation*/
+				/* If curr sock is ready to read, receive packet,  confirm */
 				if (FD_ISSET(fds[fd], &readfds))
 				{
 					/* Receive a data packet from the current socket */
-					n = recvfrom(fds[fd], &streamTbl[fd], sizeof(DATA_stdPacket), MSG_WAITALL, (struct sockaddr *) &addrTbl[clientAddr], &len);
+					n = recvfrom(fds[fd], &streamTbl[fd], 
+						sizeof(DATA_stdPacket), MSG_WAITALL, 
+						(struct sockaddr *) &addrTbl[clientAddr], &len);
 					/* Do something with the new packet */
 					processPacket(&streamTbl[fd]);
 					/* Send confirmation message if server is two-way */
 					if (SERVMODE == 2)
 					{
-						sendto(fds[fd], MSG_RECVD, strlen(MSG_RECVD), MSG_CONFIRM, (struct sockaddr *) &addrTbl[clientAddr], len);
+						sendto(fds[fd], MSG_RECVD, strlen(MSG_RECVD), 
+							MSG_CONFIRM, 
+							(struct sockaddr *) &addrTbl[clientAddr], len);
 						printf("\nServer: Confirmation sent.\n\n");
 					}
 					check += 1;
@@ -135,9 +143,9 @@ int main(void)
 	exit(EXIT_SUCCESS);
 }
 
-/*=====================================================================================
+/*===========================================================================
 ** FUNCTION DEFINITIONS
-**=====================================================================================*/
+**===========================================================================*/
 void initServAddrs(struct sockaddr_in addrTbl[])
 {
 	/* Init memory for all addresses */
@@ -172,7 +180,8 @@ int createSocket()
 
 void bindSocket(int fd, int servAddr, struct sockaddr_in addrTbl[])
 {
-	if(bind(fd, (struct sockaddr *) &addrTbl[servAddr], sizeof(struct sockaddr_in)) == -1)
+	if(bind(fd, (struct sockaddr *) &addrTbl[servAddr], 
+		sizeof(struct sockaddr_in)) == -1)
 	{
 		perror("bind failed");
 		exit(EXIT_FAILURE);
