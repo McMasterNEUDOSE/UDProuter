@@ -8,17 +8,17 @@
 ** $Date:      	2020-07-11
 **
 ** Purpose:  	This application is a UDP server which receives packets from
-** multiple sockets and sends confirmation to clients.
+** 				multiple sockets and sends confirmation to clients.
 **
 ** Functions Defined:
-**    	initServAddrs 	- Initializes memory for addresses in address table 
-** and sets server HOST/PORT addresses
-**    	createSocket 	- Calls to socket() to create a new socket
-**   	bindSocket		- Calls to bind() to bind a socket to a server
-** address in the address table
-**		processPacket	- Prints the data from the received packet
-**		getMax			- Global utility function to get max integer from 
-** array of integers
+**    	initServAddrs 	- 	Initializes memory for addresses in address table 
+** 							and sets server HOST/PORT addresses
+**    	createSocket 	- 	Calls to socket() to create a new socket
+**   	bindSocket		- 	Calls to bind() to bind a socket to a server
+** 							address in the address table
+**		processPacket	- 	Prints the data from the received packet
+**		getMax			- 	Global utility function to get max integer from 
+** 							array of integers
 **
 ** Modification History:
 **   Date | Author | Description
@@ -191,10 +191,10 @@ void bindSocket(int fd, int servAddr, struct sockaddr_in addrTbl[])
 void processPacket(DATA_stdPacket *packet)
 {
 	printf("Client says:\n\t\t%c\n\t\t%c\n\t\t%hhu\n\t\t%hhu\n",
-						packet->firstChar,
-						packet->secondChar,
-						packet->firstNum,
-						packet->secondNum);
+			packet->firstChar,
+			packet->secondChar,
+			packet->firstNum,
+			packet->secondNum);
 }
 
 int getMax(int array[])

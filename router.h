@@ -50,7 +50,7 @@ int createSocket();
 void bindSocket(int fd, int servAddr, struct sockaddr_in addrTbl[]);
 
 /* Packet processing functions */
-void initPacket(DATA_stdPacket *, char [], int []);
+void initPacket(DATA_stdPacket *, char [], UINT8 []);
 void processPacket(DATA_stdPacket *);
 
 /* Global utility functions */

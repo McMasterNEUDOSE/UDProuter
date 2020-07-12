@@ -35,7 +35,7 @@ int main(void)
 {
 	/* Create data constands */
 	char letters[2];
-	int nums[2];
+	UINT8 nums[2];
 	/* Create child process */
 	PID pid = createChild();
 	/* Create a socket */
@@ -126,7 +126,7 @@ int createSocket()
 	}
 }
 
-void initPacket(DATA_stdPacket *packet, char letters[], int nums[])
+void initPacket(DATA_stdPacket *packet, char letters[], UINT8 nums[])
 {
 	packet->firstChar 	= letters[0];
 	packet->secondChar 	= letters[1];
