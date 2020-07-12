@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==========================================================================
 ** File Name:  	client.c
 **
 ** Title:  	UDP Client Application
@@ -7,8 +7,8 @@
 ** $Revision: 	1.0 $
 ** $Date:      	2020-07-11
 **
-** Purpose:  	This application is a UDP client which creates a forked process,
-**				and sends packets to two sockets in the UDP server application.
+** Purpose:  	This application is a UDP client which creates a forked 
+** process, and sends packets to two sockets in the UDP server application.
 **
 ** Functions Defined:
 **    createChild 	- Creates child process using fork()
@@ -20,17 +20,17 @@
 **   ---------------------------
 **   2020-07-11 | Stephen Scott | Build #: Code Started
 **
-**===========================================================================*/
+**==========================================================================*/
 
 
-/*===========================================================================
+/*==========================================================================
 ** INCLUDE FILES
-**===========================================================================*/
+**==========================================================================*/
 #include "router.h"
 
-/*===========================================================================
+/*==========================================================================
 ** MAIN PROCESS
-**===========================================================================*/
+**==========================================================================*/
 int main(void)
 {
 	/* Create data constands */
@@ -50,7 +50,7 @@ int main(void)
 	memset(&servaddr, 0, sizeof(servaddr));
 	/* Set server address host - same host for each process */
 	servaddr.sin_addr.s_addr = HOST;
-	/* Check to see which process I am, and adjust PORT and data accordingly */
+	/* Check which process I am, and adjust PORT and data accordingly */
 	if (pid == 0)
 	{
 		printf("I am the child process.\n");
@@ -77,7 +77,7 @@ int main(void)
 	sendto(fd, (const DATA_stdPacket *) &packet, sizeof(DATA_stdPacket), 
 		MSG_CONFIRM, (const struct sockaddr *) &servaddr, len);
 	printf("\nClient: Packet sent.\n\n");
-	/* If server mode is two-way then receive confirmation packet from server */
+	/* If server mode is two-way - receive confirmation packet from server */
 	if (SERVMODE == 2)
 	{
 		n = recvfrom(fd, (char *)buffer, MAXBUFFER, MSG_WAITALL, 
@@ -91,9 +91,9 @@ int main(void)
 	exit(EXIT_SUCCESS);
 }
 
-/*===========================================================================
+/*==========================================================================
 ** FUNCTION DEFINITIONS
-**===========================================================================*/
+**==========================================================================*/
 
 PID createChild()
 {
