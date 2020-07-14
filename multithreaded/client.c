@@ -33,15 +33,13 @@
 **==========================================================================*/
 int main(void)
 {
-	/* Create data constands */
+	/* Create data constants */
 	char letters[2];
 	UINT8 nums[2];
 	/* Create child process */
 	PID pid = createChild();
 	/* Create a socket */
 	int fd = createSocket();
-	/* Init buffer for receiving server confirmation packets */
-	char buffer[MAXBUFFER];
 	/* Create struct for storing packet data */
 	DATA_stdPacket packet;
 	/* Create struct for storing server address*/
@@ -69,10 +67,9 @@ int main(void)
 		letters[0] = 'P'; letters[1] = 'A'; nums[0] = 3; nums[1] = 4;
 		initPacket(&packet, letters, nums);
 	}
-
-	int len, n;
-
-	len = sizeof(servaddr);
+	/* Init len for sendto() function */
+	int len = sizeof(servaddr);
+	/* Loop sending packets at 1HZ*/
 	while(1)
 	{
 		/* Send packet to server */
@@ -90,7 +87,6 @@ int main(void)
 /*==========================================================================
 ** FUNCTION DEFINITIONS
 **==========================================================================*/
-
 PID createChild()
 {
 	PID pid;

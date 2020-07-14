@@ -24,7 +24,7 @@
 /* Choose any available host */
 #define HOST 				INADDR_ANY
 /* Max string buffer for confirmation msg */			
-#define MAXBUFFER 			1024				
+#define MAXBUFFER 			1024		
 /* Number of sockets required - one for each client */													
 #define NUMSOCK				2		
 /* Specifies two-way comms - server sends confirmation */			
@@ -43,15 +43,6 @@
 /*==========================================================================
 ** FUNCTION PROTOTYPES
 **==========================================================================*/
-/* Mutex functions */
-void MUTEX_LOCK(MUTEX);
-void MUTEX_UNLOCK(MUTEX);
-
-/* Semaphore functions */
-void SEM_INIT(SEM, int);
-void SEM_WAIT(SEM sem);
-void SEM_SIGNAL(SEM sem);
-
 /* Address functions */
 void initServAddrs(struct sockaddr_in addrs[]);
 
