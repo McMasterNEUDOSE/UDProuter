@@ -8,7 +8,7 @@
 ** $Date:      	2020-07-11
 **
 ** Purpose:  	This application is a UDP server which receives packets from
-** 				multiple sockets and sends confirmation to clients.
+** 				multiple sockets in different pthreads
 **
 ** Functions Defined:
 **    	initServAddrs 	- 	Initializes memory for addresses in address table 
@@ -47,35 +47,49 @@ SEM buffers_sem[NUMSOCK];
 DATA_pthread threads[NUMSOCK];
 
 /*==========================================================================
-** SOCKET READING THREAD
+** SOCKET READING THREAD ENTRY
 **==========================================================================*/
 void *readSocket(void *args)
 {
+	/* Initally assume thread is invalid */
 	int thread = -1;
+	/* phread_self() returns current thread ID*/
 	for (int i; i < NUMSOCK; i++){
+		/* Thread data is mine if current thread ID matches data */
 		if (threads[i].tid == pthread_self())
 		{
+			/* Assign thread num from global data as local thread num */
 			thread = threads[i].threadnum;
 		}
 	}
+	/* Is thread is still -1, no thread id matches global data */
 	if (thread < 0)
 	{
 		printf("No matching thread\n");
 		exit(EXIT_FAILURE);
 	}
+	/* Init packet for reading into */
 	DATA_stdPacket packet;
+	/* Get length of client address for recvfrom function */
 	int len = sizeof(struct sockaddr_in);
+	/* Loop receiving packets */
 	while(1)
 	{
+		/* Pend on UDP socket for packet */
 		recvfrom(threads[thread].fd, &packet, 
 				sizeof(DATA_stdPacket), MSG_WAITALL, 
 				(struct sockaddr *) &threads[thread].clientAddr, &len);
 		printf("Thread %d: received packet\n", thread);
+		/* Decrement my buffer semaphore to indicate filling buffer */
 		sem_wait(&buffers_sem[thread]);
+		/* Attain lock for accessing buffer queue */
 		pthread_mutex_lock(&buffers_mutex[thread]);
+		/* Add packet to buffer queue */
 		enqueue(threads[thread].buffer, packet);
+		/* Release lock */
 		pthread_mutex_unlock(&buffers_mutex[thread]);
 	}
+	/* Close file descriptor upo exit of thread */
 	close(threads[thread].fd);
 	pthread_exit(0);
 }
@@ -116,43 +130,59 @@ int main(void)
 	/* Create socket reading threads */
 	for (int i = 0; i < NUMSOCK; i++)
 	{
-		if ((createret = pthread_create(&threads[i].tid, NULL, *readSocket, NULL)) != 0)
+		/* pthread_create() returns 0 on success - check for error */
+		if ((createret = pthread_create(&threads[i].tid, NULL, 
+			*readSocket, NULL)) != 0)
 		{
 			perror("thread failed");
 			exit(EXIT_FAILURE);
 		}
 		printf("Created new thread.\n");
-		threads[i].threadnum = i;
-		threads[i].fd = fds[i];
-		threads[i].buffer = buffers[i];
-		threads[i].clientAddr = addrTbl[i+tblIndex];
+		/* Assign data to global thread data */
+		threads[i].threadnum 	= i;
+		threads[i].fd 			= fds[i];
+		threads[i].buffer 		= buffers[i];
+		threads[i].clientAddr 	= addrTbl[i+tblIndex];
+		/* Init semaphore to keep track of filling buffer */
+		sem_init(&buffers_sem[i], 0, MAXBUFFER);
+		/* Move to next client address in the address table */
 		tblIndex += NEXTADDR;
-		sem_init(&buffers_sem[i], 0, MAXBUFFER - 1);
 	}
+	/* Packet for processing data from buffer queue */
 	DATA_stdPacket packet;
+	/* Tally of packets processed */
 	int packetsProcessed = 0;
-	/* Do work with incoming packets */
+	/* Do work with incoming packets at 2HZ */
 	while(1)
 	{
+		/* Loop through each buffer queue */
 		for (int i = 0; i < NUMSOCK; i++)
 		{
+			/* Attain lock before accessing shared buffer */
 			pthread_mutex_lock(&buffers_mutex[i]);
+			/* If the buffer is empty, no data to process */
 			if (isEmpty(threads[i].buffer))
 			{
+				/* Release lock */
 				pthread_mutex_unlock(&buffers_mutex[i]);
 				continue;
 			}
 			else
 			{
+				/* Take a packet from the buffer queue */
 				packet = dequeue(threads[i].buffer);
 				printf("Packet dequeued from thread %d\n", i);
+				/* Signal that a packet can be enqueued */
 				sem_post(&buffers_sem[i]);
+				/* Release lock */
 				pthread_mutex_unlock(&buffers_mutex[i]);
+				/* Do something with the packet - print data */
 				processPacket(&packet);
 				packetsProcessed += 1;
 				printf("%d Packets processed.\n", packetsProcessed);
 			}
 		}
+		/* Simulate main thread working slower than reading threads */
 		sleep(2);
 	}
 	/* Join threads when finished */
