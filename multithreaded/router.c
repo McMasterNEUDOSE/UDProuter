@@ -31,7 +31,54 @@
 /*==========================================================================
 ** INCLUDE FILES
 **==========================================================================*/
-#include "router.h"
+#include "../router.h"
+#include "queue.h"
+
+/*==========================================================================
+** GLOBAL VARIABLES
+**==========================================================================*/
+/* Init input buffer for each client */
+packetQueue *buffers[NUMSOCK];
+/* Mutual exclusion for input buffers */
+MUTEX buffers_mutex[NUMSOCK];
+/* Counting semaphores for full buffer */
+SEM buffers_sem[NUMSOCK];
+/* Pthread structure to hold thread info */
+DATA_pthread threads[NUMSOCK];
+
+/*==========================================================================
+** SOCKET READING THREAD
+**==========================================================================*/
+void *readSocket(void *args)
+{
+	int thread = -1;
+	for (int i; i < NUMSOCK; i++){
+		if (threads[i].tid == pthread_self())
+		{
+			thread = threads[i].threadnum;
+		}
+	}
+	if (thread < 0)
+	{
+		printf("No matching thread\n");
+		exit(EXIT_FAILURE);
+	}
+	DATA_stdPacket packet;
+	int len = sizeof(struct sockaddr_in);
+	while(1)
+	{
+		recvfrom(threads[thread].fd, &packet, 
+				sizeof(DATA_stdPacket), MSG_WAITALL, 
+				(struct sockaddr *) &threads[thread].clientAddr, &len);
+		printf("Thread %d: received packet\n", thread);
+		sem_wait(&buffers_sem[thread]);
+		pthread_mutex_lock(&buffers_mutex[thread]);
+		enqueue(threads[thread].buffer, packet);
+		pthread_mutex_unlock(&buffers_mutex[thread]);
+	}
+	close(threads[thread].fd);
+	pthread_exit(0);
+}
 
 /*==========================================================================
 ** MAIN PROCESS
@@ -40,15 +87,12 @@ int main(void)
 {
 	/* Init array to hold socket file descriptors */
 	int fds[NUMSOCK];
-	/* Init table which includes data buffer for each client */
-	DATA_stdPacket streamTbl[NUMSOCK];
-	/*
-	** Init socket addresses - two for each two-way communication 
-	** 		1. Server Address 1
-	**		2. Client Address 1
-	**		3. Server Address 2
-	**		4. Client Address 2
-	*/
+	/* Create a buffer queue for each client */
+	for (int buffer = 0; buffer < NUMSOCK; buffer++)
+	{
+		buffers[buffer] = createQueue(MAXBUFFER);
+		printf("Buffer Pointer: %d ->%p\n", buffer, buffers[buffer]);
+	}
 	/* Init table to hold client and server addresses */
 	struct sockaddr_in addrTbl[NUMADDR];
 	/* Init server addresses */
@@ -65,81 +109,57 @@ int main(void)
 		/* Move to next server address in address table */
 		servAddr += NEXTADDR;
 	}
-	/* Various constants in loop */
-	int len, n, selectret, check = 0;
-	/* Stores length of client address for recvfrom/sendto() */
-	len = sizeof(struct sockaddr_in);
-	/* Init set of file descriptors for select() to monitor */
-	fd_set readfds;
-	/* Init timeout struct for select() */
-	struct timeval timeout;
-	/* Continue to wait for packets */
-	while(1)
+	/* Int to store return from pthread_create */
+	int createret;
+	/* Int to store index in address table */
+	int tblIndex = FIRST_CLIENTADDR;
+	/* Create socket reading threads */
+	for (int i = 0; i < NUMSOCK; i++)
 	{
-		/* Reset bits for select() monitoring */
-		FD_ZERO(&readfds);
-		/* Set each file descriptor to be monitored by select() */
-		for (int fd = 0; fd < NUMSOCK; fd++)
+		if ((createret = pthread_create(&threads[i].tid, NULL, *readSocket, NULL)) != 0)
 		{
-			FD_SET(fds[fd], &readfds);
-		}
-		/* Reset timeout in case values were altered by select () */
-		timeout.tv_sec 	= 5;
-		timeout.tv_usec = 0;
-		/* Calls select() for blocking-wait on sockets until timeout*/
-		selectret = select(getMax(fds) + 1, &readfds, NULL, NULL, &timeout);
-		if (selectret == -1)
-		{
-			perror("select failed.");
+			perror("thread failed");
 			exit(EXIT_FAILURE);
 		}
-		/* Zero if select times out when no sockets are ready for read */
-		else if (selectret == 0)
-		{
-			printf("Timeout. Continue.\n");
-			continue;
-		}
-		else
-		{
-			/* Init index for client addresses */
-			int clientAddr = FIRST_CLIENTADDR;
-			/* Check which sockets are ready for reading, and read */
-			for (int fd = 0; fd < NUMSOCK; fd++)
-			{
-				/* If curr sock is ready to read, receive packet,  confirm */
-				if (FD_ISSET(fds[fd], &readfds))
-				{
-					/* Receive a data packet from the current socket */
-					n = recvfrom(fds[fd], &streamTbl[fd], 
-						sizeof(DATA_stdPacket), MSG_WAITALL, 
-						(struct sockaddr *) &addrTbl[clientAddr], &len);
-					/* Do something with the new packet */
-					processPacket(&streamTbl[fd]);
-					/* Send confirmation message if server is two-way */
-					if (SERVMODE == 2)
-					{
-						sendto(fds[fd], MSG_RECVD, strlen(MSG_RECVD), 
-							MSG_CONFIRM, 
-							(struct sockaddr *) &addrTbl[clientAddr], len);
-						printf("\nServer: Confirmation sent.\n\n");
-					}
-					check += 1;
-				}
-				/* Move to next client address in the table */
-				clientAddr += NEXTADDR;
-			}
-			/* Check if all messages have been received */
-			if (check == 2){
-				break;
-			}
-		}
+		printf("Created new thread.\n");
+		threads[i].threadnum = i;
+		threads[i].fd = fds[i];
+		threads[i].buffer = buffers[i];
+		threads[i].clientAddr = addrTbl[i+tblIndex];
+		tblIndex += NEXTADDR;
+		sem_init(&buffers_sem[i], 0, MAXBUFFER - 1);
 	}
-	/* Close each open socket */
-	for (int fd = 0; fd < NUMSOCK; fd++)
+	DATA_stdPacket packet;
+	int packetsProcessed = 0;
+	/* Do work with incoming packets */
+	while(1)
 	{
-		close(fds[fd]);
+		for (int i = 0; i < NUMSOCK; i++)
+		{
+			pthread_mutex_lock(&buffers_mutex[i]);
+			if (isEmpty(threads[i].buffer))
+			{
+				pthread_mutex_unlock(&buffers_mutex[i]);
+				continue;
+			}
+			else
+			{
+				packet = dequeue(threads[i].buffer);
+				printf("Packet dequeued from thread %d\n", i);
+				sem_post(&buffers_sem[i]);
+				pthread_mutex_unlock(&buffers_mutex[i]);
+				processPacket(&packet);
+				packetsProcessed += 1;
+				printf("%d Packets processed.\n", packetsProcessed);
+			}
+		}
+		sleep(2);
 	}
-
+	/* Join threads when finished */
+	for (int i = 0; i < NUMSOCK; i++)
+	{
+		pthread_join(threads[i].tid, NULL);
+	}
 	exit(EXIT_SUCCESS);
 }
 
@@ -148,6 +168,13 @@ int main(void)
 **==========================================================================*/
 void initServAddrs(struct sockaddr_in addrTbl[])
 {
+	/*
+	** Init socket addresses - two for each two-way communication 
+	** 		1. Server Address 1
+	**		2. Client Address 1
+	**		3. Server Address 2
+	**		4. Client Address 2
+	*/
 	/* Init memory for all addresses */
 	memset(addrTbl, 0, NUMADDR*sizeof(struct sockaddr_in));
 	/*
