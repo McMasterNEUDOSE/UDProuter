@@ -69,7 +69,7 @@ int main(void)
 	}
 	/* Init len for sendto() function */
 	int len = sizeof(servaddr);
-	/* Loop sending packets at 1HZ*/
+	/* Loop sending packets at 1 Hz*/
 	while(1)
 	{
 		/* Send packet to server */

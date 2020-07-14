@@ -152,7 +152,7 @@ int main(void)
 	DATA_stdPacket packet;
 	/* Tally of packets processed */
 	int packetsProcessed = 0;
-	/* Do work with incoming packets at 2HZ */
+	/* Do work with incoming packets at 500 MHz */
 	while(1)
 	{
 		/* Loop through each buffer queue */
