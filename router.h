@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <netinet/udp.h>
 #include "data_types.h"
+#include "multithreaded/queue.h"
 
 /*==========================================================================
 ** MACRO DEFINITIONS
@@ -42,6 +43,15 @@
 /*==========================================================================
 ** FUNCTION PROTOTYPES
 **==========================================================================*/
+/* Mutex functions */
+void MUTEX_LOCK(MUTEX);
+void MUTEX_UNLOCK(MUTEX);
+
+/* Semaphore functions */
+void SEM_INIT(SEM, int);
+void SEM_WAIT(SEM sem);
+void SEM_SIGNAL(SEM sem);
+
 /* Address functions */
 void initServAddrs(struct sockaddr_in addrs[]);
 
